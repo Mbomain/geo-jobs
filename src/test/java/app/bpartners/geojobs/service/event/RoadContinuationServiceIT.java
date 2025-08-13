@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Bean;
 class RoadContinuationServiceIT extends FacadeIT {
 
   private static final String EXPECTED_PRESIGNED_URL =
-      "https://mock-presigned-url/continued-abohimanjaka.geojson";
+      "https://mock-presigned-url/continued.geojson";
   private final RoadContinuerService continuer = mock(RoadContinuerService.class);
   @Autowired private RoadContinuationService roadContinuationService;
   @Autowired private GeoJsonRoadContinuationRepository roadContinuationRepository;
@@ -50,10 +50,11 @@ class RoadContinuationServiceIT extends FacadeIT {
 
     var event = new RoadContinuationRequested(geoJSON, zoom, imageSize);
     roadContinuationService.accept(event);
-    assertFalse(roadContinuationRepository.findAll().isEmpty());
-    assertEquals(
-        "https://mock-presigned-url/continued-abohimanjaka.geojson",
-        roadContinuationRepository.findAll().stream().findFirst().get().getContinuedGeoJsonPath());
+    var actualR = roadContinuationRepository.findAll();
+    var actualContent = actualR.stream().findFirst().orElse(null);
+
+    assertFalse(actualR.isEmpty());
+    assertEquals(EXPECTED_PRESIGNED_URL, actualContent.getContinuedGeoJsonPath());
   }
 
   @Test
