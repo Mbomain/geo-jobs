@@ -1,8 +1,9 @@
-package app.bpartners.geojobs.endpoint.rest.postprocessing;
+package app.bpartners.geojobs.endpoint.rest.validator;
 
-import static java.io.File.createTempFile;
 import static org.junit.jupiter.api.Assertions.*;
 
+import app.bpartners.geojobs.endpoint.rest.mapper.FileFromMultipartFileMapper;
+import app.bpartners.geojobs.model.exception.BadRequestException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
@@ -13,17 +14,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class GeoJsonValidatorTest {
+
   private GeoJsonValidator subject;
 
   @BeforeEach
   void setUp() {
-    var mapper = new ObjectMapper();
-    subject = new GeoJsonValidator(mapper);
+    ObjectMapper mapper = new ObjectMapper();
+    FileFromMultipartFileMapper fileMapper = new FileFromMultipartFileMapper();
+    subject = new GeoJsonValidator(mapper, fileMapper);
   }
 
   @Test
-  void test_an_invalid_geoJSON_without_polygon_enclosure() throws IOException {
-    var invalidGeoJson =
+  void invalid_geojson_without_polygon_closure_should_throw_IllegalArgumentException()
+      throws IOException {
+    String content =
         """
         {
           "type": "FeatureCollection",
@@ -46,12 +50,14 @@ class GeoJsonValidatorTest {
           ]
         }
         """;
-    assertCheckInvalidGeoJson(invalidGeoJson);
+    var file = getInvalidGeoJSONFile(content);
+    assertThrows(IllegalArgumentException.class, () -> subject.accept(file));
   }
 
   @Test
-  void test_an_invalid_geoJSON_with_self_intersection() throws IOException {
-    var invalidGeoJSONContent =
+  void invalid_geojson_with_self_intersection_should_throw_BadRequestException()
+      throws IOException {
+    String content =
         """
         {
           "type": "FeatureCollection",
@@ -76,14 +82,15 @@ class GeoJsonValidatorTest {
             }
           ]
         }
-
         """;
-    assertCheckInvalidGeoJson(invalidGeoJSONContent);
+    var file = getInvalidGeoJSONFile(content);
+    assertThrows(BadRequestException.class, () -> subject.accept(file));
   }
 
   @Test
-  void test_an_invalid_geoJSON_with_overlapping_outer_shell() throws IOException {
-    var invalidJSON =
+  void invalid_geojson_with_overlapping_outer_shell_should_throw_BadRequestException()
+      throws IOException {
+    String content =
         """
         {
           "type": "Feature",
@@ -110,14 +117,14 @@ class GeoJsonValidatorTest {
             "name": "Hole overlapping outer shell"
           }
         }
-
         """;
-    assertCheckInvalidGeoJson(invalidJSON);
+    var file = getInvalidGeoJSONFile(content);
+    assertThrows(BadRequestException.class, () -> subject.accept(file));
   }
 
   @Test
-  void test_an_invalid_geoJSON_with_wrong_dimension() throws IOException {
-    var invalidJSON =
+  void invalid_geojson_with_wrong_dimension_should_throw_BadRequestException() throws IOException {
+    String content =
         """
         {
           "type": "Feature",
@@ -137,28 +144,38 @@ class GeoJsonValidatorTest {
             "name": "Dimension mismatch"
           }
         }
-
         """;
-    assertCheckInvalidGeoJson(invalidJSON);
+    var file = getInvalidGeoJSONFile(content);
+    assertThrows(BadRequestException.class, () -> subject.accept(file));
   }
 
   @Test
-  void test_a_valid_geojson() throws URISyntaxException {
+  void valid_geojson_should_not_throw_any_exception() throws URISyntaxException {
     var resource = getClass().getResource("/geojson/quai-de-bourbon.geojson");
     assertNotNull(resource);
-    File geoJSON = new File(resource.toURI());
-
-    assertTrue(subject.test(geoJSON));
+    var file = new File(resource.toURI());
+    assertDoesNotThrow(() -> subject.accept(file));
   }
 
-  private void assertCheckInvalidGeoJson(String geoJson) throws IOException {
-    var invalidGeoJSON = getInvalidGeoJSONFile(geoJson);
-    assertThrows(RuntimeException.class, () -> subject.test(invalidGeoJSON));
+  @Test
+  void valid_geojson_from_dijon_should_not_throw_any_exception() throws URISyntaxException {
+    var resource = getClass().getResource("/dijon/line-cleaned.geojson");
+    assertNotNull(resource);
+    var file = new File(resource.toURI());
+    assertDoesNotThrow(() -> subject.accept(file));
   }
 
-  private File getInvalidGeoJSONFile(String invalidContent) throws IOException {
-    var invalidF = createTempFile("invalid" + UUID.randomUUID(), ".geojson");
-    Files.writeString(invalidF.toPath(), invalidContent);
-    return invalidF;
+  @Test
+  void invalid_excel_file_should_throw_BadRequestException() throws URISyntaxException {
+    var resource = getClass().getResource("/excel/excelFile.xlsx");
+    assertNotNull(resource);
+    var file = new File(resource.toURI());
+    assertThrows(BadRequestException.class, () -> subject.accept(file));
+  }
+
+  private File getInvalidGeoJSONFile(String content) throws IOException {
+    var tempFile = Files.createTempFile("invalid-" + UUID.randomUUID(), ".geojson").toFile();
+    Files.writeString(tempFile.toPath(), content);
+    return tempFile;
   }
 }

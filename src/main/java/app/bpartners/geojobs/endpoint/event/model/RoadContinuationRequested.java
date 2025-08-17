@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.endpoint.event.model;
 
+import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
 import java.io.File;
 import java.time.Duration;
 import lombok.*;
@@ -11,8 +12,7 @@ import lombok.*;
 @ToString
 public class RoadContinuationRequested extends PojaEvent {
   private final File geoJSON;
-  private final Integer zoom;
-  private final Integer imageSize;
+  private final TilingConf tilingConf;
 
   @Override
   public Duration maxConsumerDuration() {

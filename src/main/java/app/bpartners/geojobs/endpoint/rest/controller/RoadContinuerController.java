@@ -1,5 +1,6 @@
 package app.bpartners.geojobs.endpoint.rest.controller;
 
+import app.bpartners.geojobs.endpoint.rest.validator.GeoJsonValidator;
 import app.bpartners.geojobs.service.RoadContinuerService;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class RoadContinuerController {
 
   private RoadContinuerService roadContinuerService;
+  private GeoJsonValidator geoJsonValidator;
 
   @SneakyThrows
   @PostMapping("/road-continuer")
@@ -21,6 +23,7 @@ public class RoadContinuerController {
       @RequestParam("geojson-file") MultipartFile geoJson,
       @RequestParam Integer zoom,
       @RequestParam Integer imageSize) {
-    return roadContinuerService.continueRoute(geoJson, zoom, imageSize);
+    geoJsonValidator.accept(geoJson);
+    return roadContinuerService.makeContinuation(geoJson, zoom, imageSize);
   }
 }
