@@ -1,7 +1,6 @@
 package app.bpartners.geojobs.endpoint.event.model;
 
 import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
-import java.io.File;
 import java.time.Duration;
 import lombok.*;
 
@@ -11,7 +10,8 @@ import lombok.*;
 @EqualsAndHashCode(callSuper = false)
 @ToString
 public class RoadContinuationRequested extends PojaEvent {
-  private final File geoJSON;
+  private final String bucketKey;
+  private final String hash;
   private final TilingConf tilingConf;
 
   @Override

@@ -9,6 +9,7 @@ import app.bpartners.geojobs.conf.FacadeIT;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.RoadContinuationRequested;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
+import app.bpartners.geojobs.file.hash.FileHash;
 import app.bpartners.geojobs.repository.GeoJsonRoadContinuationRepository;
 import app.bpartners.geojobs.repository.model.geojson.GeoJsonRoadContinuation;
 import java.io.File;
@@ -47,6 +48,7 @@ public class RoadContinuerServiceIT extends FacadeIT {
     var fakeContinuation = new GeoJsonRoadContinuation();
     fakeContinuation.setBucketKey("ambohijatovo-continued.geojson");
 
+    when(bucketComponent.upload(any(File.class), anyString())).thenReturn(mock(FileHash.class));
     when(bucketComponent.presign(anyString(), any(Duration.class))).thenReturn(mockedURL);
     when(repository.findById(anyString()))
         .thenReturn(Optional.empty())
@@ -55,9 +57,9 @@ public class RoadContinuerServiceIT extends FacadeIT {
     var result = subject.makeContinuation(geoJSONMultipartFile, 17, 1024);
 
     assertNotNull(result);
-    assertEquals(mockedURL.toString(), result.get("url"));
+    assertEquals(mockedURL.toString(), result.url());
 
-    verify(eventProducer).accept(any());
-    verify(bucketComponent).presign(anyString(), any(Duration.class));
+    verify(eventProducer, times(1)).accept(any());
+    verify(bucketComponent, times(1)).presign(anyString(), any(Duration.class));
   }
 }

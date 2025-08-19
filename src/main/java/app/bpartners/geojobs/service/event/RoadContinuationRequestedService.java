@@ -8,7 +8,6 @@ import app.bpartners.geojobs.endpoint.event.model.RoadContinuationRequested;
 import app.bpartners.geojobs.endpoint.rest.postprocessing.Geojson;
 import app.bpartners.geojobs.endpoint.rest.postprocessing.continuer.LatLonLinesContinuer;
 import app.bpartners.geojobs.endpoint.rest.postprocessing.model.TilingConf;
-import app.bpartners.geojobs.file.GeoJsonHasher;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.model.geometry.quadrilateral.model.AlphaConf;
 import app.bpartners.geojobs.model.geometry.route.ContinuationConf;
@@ -19,7 +18,6 @@ import app.bpartners.geojobs.repository.GeoJsonRoadContinuationRepository;
 import app.bpartners.geojobs.repository.model.geojson.GeoJsonRoadContinuation;
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -39,13 +37,17 @@ public class RoadContinuationRequestedService implements Consumer<RoadContinuati
       new ContinuationConf(PI / 12, PI / 6, 500);
 
   private final BucketComponent bucketComponent;
-  private final GeoJsonHasher hasher;
   private final GeoJsonRoadContinuationRepository continuationRepository;
 
-  private static File getGeoJsonFromString(String geoJsonString) throws IOException {
+  private static File getGeoJsonFromString(String geoJsonString) {
     String uuidName = UUID.randomUUID().toString();
-    File tempFile = File.createTempFile("continued-geojson-" + uuidName, ".geojson");
-    Files.writeString(tempFile.toPath(), geoJsonString);
+    File tempFile;
+    try {
+      tempFile = File.createTempFile("continued-geojson-" + uuidName, ".geojson");
+      Files.writeString(tempFile.toPath(), geoJsonString);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     return tempFile;
   }
 
@@ -62,12 +64,12 @@ public class RoadContinuationRequestedService implements Consumer<RoadContinuati
 
   @Override
   public void accept(RoadContinuationRequested continuationRequested) {
-    File geoJsonFile = continuationRequested.getGeoJSON();
-    String hash = hasher.apply(geoJsonFile).value();
+    File geoJsonFile = bucketComponent.download(continuationRequested.getBucketKey());
+    String hash = continuationRequested.getHash();
 
     log.info(
         "RoadContinuationRequested received, asynchronous road continuation process started"
-            + " (id={})",
+            + ": id={}",
         hash);
 
     GeoJsonRoadContinuation record = new GeoJsonRoadContinuation(hash, null, PROCESSING);
@@ -76,9 +78,9 @@ public class RoadContinuationRequestedService implements Consumer<RoadContinuati
 
     var continuedGeoJsonFile = makeContinuation(geoJsonFile, continuationRequested.getTilingConf());
 
-    var bucketKey = UUID.randomUUID() + ".geojson";
-    bucketComponent.upload(continuedGeoJsonFile, bucketKey);
-    log.info("Road continuation done (id={}, bucket_key={})", hash, bucketKey);
+    var bucketKey = "road-continuation/continued/" + UUID.randomUUID() + ".geojson";
+    var fileHash = bucketComponent.upload(continuedGeoJsonFile, bucketKey);
+    log.info("Road continuation done : id={}, bucket_key={}", fileHash.value(), bucketKey);
 
     record.setBucketKey(bucketKey);
     record.setStatus(FINISHED);
@@ -94,12 +96,8 @@ public class RoadContinuationRequestedService implements Consumer<RoadContinuati
     var continuer = getLatLonContinuer(getRouteContinuationConf(), tilingConf);
     var continuedPolygons = continuer.apply(geoJSON);
 
-    try {
-      var continuedGeoJsonFile = getGeoJsonFromString(new Geojson(continuedPolygons).stringValue());
-      log.info("Continuation process finished");
-      return continuedGeoJsonFile;
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    var continuedGeoJsonFile = getGeoJsonFromString(new Geojson(continuedPolygons).stringValue());
+    log.info("Continuation process finished");
+    return continuedGeoJsonFile;
   }
 }

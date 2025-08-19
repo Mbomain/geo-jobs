@@ -1,8 +1,8 @@
 package app.bpartners.geojobs.endpoint.rest.controller;
 
+import app.bpartners.geojobs.endpoint.model.RoadContinuationResponse;
 import app.bpartners.geojobs.endpoint.rest.validator.GeoJsonValidator;
 import app.bpartners.geojobs.service.RoadContinuerService;
-import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,7 +19,7 @@ public class RoadContinuerController {
 
   @SneakyThrows
   @PostMapping("/road-continuer")
-  public Map<String, String> roadContinuer(
+  public RoadContinuationResponse roadContinuer(
       @RequestParam("geojson-file") MultipartFile geoJson,
       @RequestParam Integer zoom,
       @RequestParam Integer imageSize) {

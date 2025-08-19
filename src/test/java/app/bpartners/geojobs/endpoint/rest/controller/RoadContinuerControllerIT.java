@@ -9,6 +9,7 @@ import app.bpartners.geojobs.conf.FacadeIT;
 import app.bpartners.geojobs.endpoint.event.EventProducer;
 import app.bpartners.geojobs.endpoint.event.model.RoadContinuationRequested;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
+import app.bpartners.geojobs.file.hash.FileHash;
 import app.bpartners.geojobs.model.exception.BadRequestException;
 import app.bpartners.geojobs.repository.GeoJsonRoadContinuationRepository;
 import app.bpartners.geojobs.repository.model.geojson.GeoJsonRoadContinuation;
@@ -46,6 +47,7 @@ class RoadContinuerControllerIT extends FacadeIT {
     var fakeContinuation = new GeoJsonRoadContinuation();
     fakeContinuation.setBucketKey("quai-de-bourbon-continued-roads.geojson");
 
+    when(bucketComponent.upload(any(File.class), anyString())).thenReturn(mock(FileHash.class));
     when(bucketComponent.presign(anyString(), any(Duration.class)))
         .thenReturn(URI.create(preSignedUrl).toURL());
     when(repository.findById(anyString()))
@@ -55,7 +57,7 @@ class RoadContinuerControllerIT extends FacadeIT {
     var actual = subject.roadContinuer(uploadedGeoJSON, 17, 1024);
 
     assertNotNull(actual);
-    assertEquals(preSignedUrl, actual.get("url"));
+    assertEquals(preSignedUrl, actual.url());
 
     verify(eventProducer).accept(any());
     verify(bucketComponent).presign(anyString(), any(Duration.class));

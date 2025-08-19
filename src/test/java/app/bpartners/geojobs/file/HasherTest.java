@@ -6,9 +6,9 @@ import java.io.File;
 import java.net.URISyntaxException;
 import org.junit.jupiter.api.Test;
 
-class GeoJsonHasherTest {
+class HasherTest {
 
-  private final GeoJsonHasher subject = new GeoJsonHasher();
+  private final Hasher subject = new Hasher();
 
   @Test
   void should_have_same_file_hash() throws URISyntaxException {
