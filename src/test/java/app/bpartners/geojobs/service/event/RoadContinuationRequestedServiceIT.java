@@ -13,6 +13,7 @@ import app.bpartners.geojobs.file.Hasher;
 import app.bpartners.geojobs.file.bucket.BucketComponent;
 import app.bpartners.geojobs.file.hash.FileHash;
 import app.bpartners.geojobs.repository.GeoJsonRoadContinuationRepository;
+import jakarta.ws.rs.ProcessingException;
 import java.io.File;
 import java.net.URISyntaxException;
 import org.junit.jupiter.api.Test;
@@ -60,5 +61,18 @@ class RoadContinuationRequestedServiceIT extends FacadeIT {
     var instance = repository.findById(expectedHash);
     assertTrue(instance.isPresent());
     assertNotNull(instance.get().getBucketKey());
+  }
+
+  @Test
+  void should_throw_processing_exception_because_upload_failed() throws URISyntaxException {
+    var resource = getClass().getResource("/geojson/anosy-rond-point.geojson");
+    assertNotNull(resource);
+    var geoJSON = new File(resource.toURI());
+    var expectedHash = hasher.apply(geoJSON).value();
+
+    var event = new RoadContinuationRequested("dummyBucketKey", expectedHash, TILING_CONF);
+
+    when(bucketComponent.download(anyString())).thenReturn(geoJSON);
+    assertThrows(ProcessingException.class, () -> subject.accept(event));
   }
 }

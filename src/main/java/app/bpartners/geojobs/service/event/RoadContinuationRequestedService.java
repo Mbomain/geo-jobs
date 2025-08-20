@@ -16,6 +16,7 @@ import app.bpartners.geojobs.model.geometry.route.RoutesContinuationConf;
 import app.bpartners.geojobs.model.geometry.route.UnionConf;
 import app.bpartners.geojobs.repository.GeoJsonRoadContinuationRepository;
 import app.bpartners.geojobs.repository.model.geojson.GeoJsonRoadContinuation;
+import jakarta.ws.rs.ProcessingException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -80,6 +81,10 @@ public class RoadContinuationRequestedService implements Consumer<RoadContinuati
 
     var bucketKey = "road-continuation/continued/" + UUID.randomUUID() + ".geojson";
     var fileHash = bucketComponent.upload(continuedGeoJsonFile, bucketKey);
+
+    if (fileHash == null)
+      throw new ProcessingException("Could not upload the geojson with continued road");
+
     log.info("Road continuation done : id={}, bucket_key={}", fileHash.value(), bucketKey);
 
     record.setBucketKey(bucketKey);

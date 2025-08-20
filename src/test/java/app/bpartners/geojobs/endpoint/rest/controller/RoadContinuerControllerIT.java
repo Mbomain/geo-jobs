@@ -54,12 +54,12 @@ class RoadContinuerControllerIT extends FacadeIT {
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of(fakeContinuation));
 
-    var actual = subject.roadContinuer(uploadedGeoJSON, 17, 1024);
+    var actual = subject.roadContinuer(uploadedGeoJSON, 17, 1_024);
 
     assertNotNull(actual);
     assertEquals(preSignedUrl, actual.url());
 
-    verify(eventProducer).accept(any());
+    verify(eventProducer, times(1)).accept(any());
     verify(bucketComponent).presign(anyString(), any(Duration.class));
   }
 
